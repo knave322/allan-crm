@@ -14,7 +14,7 @@ const CONFIG = {
   // 1. GOOGLE APPS SCRIPT 后端 URL
   //    步骤：部署 google-apps-script.gs → 复制 Web App URL → 粘贴到这里
   // ──────────────────────────────────────────────────────────
-  API_URL: "https://script.google.com/macros/s/AKfycbwJvyJW_RKs2idl0zBSHgMIxxiC_OKoQVzAE7Wd5o7wEV4Ak7aBE1lkqJyMD92kmTbB/exec",
+API_URL: "https://script.google.com/macros/s/AKfycbwJvyJW_RKs2idl0zBSHgMIxxiC_OKoQVzAE7Wd5o7wEV4Ak7aBE1lkqJyMD92kmTbB/exec",
 
   // ──────────────────────────────────────────────────────────
   // 2. 系统基本信息

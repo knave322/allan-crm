@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,105 +8,77 @@
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════════════════
-     SIDEBAR
-══════════════════════════════════════════════════════════ -->
 <aside id="sidebar">
   <div class="sidebar-logo">
     <div class="logo-badge" id="logo-badge">AW</div>
     <div class="logo-text">
-      <div id="sys-name">Allan CRM</div>
+      <div class="logo-title" id="sys-name">Allan CRM 2026</div>
       <div class="logo-sub" id="sys-company">ROC Wealth Advisory</div>
     </div>
   </div>
 
-  <nav>
-    <!-- 主菜单 -->
-    <div class="nav-section">
-      <div class="nav-label">主菜单</div>
-      <div class="nav-item active" data-page="dashboard">
-        <span class="nav-icon">🏠</span> 仪表板
-      </div>
-      <div class="nav-item" data-page="payments">
-        <span class="nav-icon">💳</span> 付款跟踪
-        <span class="nav-badge hidden" id="badge-payments">0</span>
-      </div>
-      <div class="nav-item" data-page="claims">
-        <span class="nav-icon">🏥</span> 理赔管理
-        <span class="nav-badge hidden" id="badge-claims">0</span>
-      </div>
-      <div class="nav-item" data-page="servicing">
-        <span class="nav-icon">🔧</span> 服务记录
-      </div>
-    </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main Menu</div>
+    <button class="nav-item active" data-page="dashboard">
+      <span class="nav-icon">🏠</span> Dashboard
+    </button>
+    <button class="nav-item" data-page="payments">
+      <span class="nav-icon">💳</span> Payment Tracker
+    </button>
+    <button class="nav-item" data-page="claims">
+      <span class="nav-icon">🏥</span> Claims
+    </button>
+    <button class="nav-item" data-page="servicing">
+      <span class="nav-icon">🔧</span> Service Records
+    </button>
 
-    <!-- 设置 -->
-    <div class="nav-section">
-      <div class="nav-label">系统</div>
-      <div class="nav-item" data-page="settings">
-        <span class="nav-icon">⚙️</span> 设置 & 帮助
-      </div>
-    </div>
+    <div class="nav-section-label" style="margin-top:8px">System</div>
+    <button class="nav-item" data-page="settings">
+      <span class="nav-icon">⚙️</span> Settings & Help
+    </button>
   </nav>
 
   <div class="sidebar-footer">
-    <div id="conn-indicator" class="conn-status conn-err">
-      <div class="conn-dot"></div>
-      <span>未连接</span>
+    <div class="connection-badge">
+      <div class="connection-dot disconnected"></div>
+      <span class="connection-text">Connecting...</span>
     </div>
-    <div style="margin-top:6px; font-size:10px;">Allan CRM 2026 v1.0</div>
+    <div style="margin-top:6px;font-size:10px;color:var(--text-muted)">Allan CRM 2026 v1.0</div>
   </div>
 </aside>
 
-<!-- ══════════════════════════════════════════════════════════
-     MAIN AREA
-══════════════════════════════════════════════════════════ -->
-<div id="main">
+<div id="main-content">
+  <!-- Offline Banner -->
+  <div id="offline-banner">
+    📶 You are offline — showing cached data. Changes cannot be saved until reconnected.
+  </div>
+
   <!-- Top Bar -->
   <header id="topbar">
-    <button class="menu-toggle" onclick="App.toggleSidebar()">☰</button>
-    <div>
-      <div class="topbar-title" id="page-title">仪表板</div>
-      <div class="topbar-subtitle" id="page-subtitle">概览 & 待办提醒</div>
+    <div class="topbar-left">
+      <div class="topbar-title" id="page-title">Dashboard</div>
+      <div class="topbar-sub" id="page-subtitle">Overview & Reminders</div>
     </div>
     <div class="topbar-actions">
-      <div class="btn-icon" title="刷新数据" onclick="App.refreshData()">🔄</div>
-      <div class="btn-icon" title="导出 CSV" onclick="App.exportCSV()">📥</div>
-      <div class="btn-icon" title="当前日期">
-        📅 <span id="today-date" style="font-size:11px;margin-left:2px;"></span>
-      </div>
+      <button class="btn btn-outline btn-sm" onclick="App.refreshData()" title="Refresh">🔄 Refresh</button>
+      <button class="btn btn-outline btn-sm" id="today-btn">
+        📅 <span id="today-date"></span>
+      </button>
     </div>
   </header>
 
-  <!-- Page Content (动态渲染) -->
   <div id="page-content">
     <div class="loading-overlay">
       <div class="spinner"></div>
-      <span>正在连接 Google Sheets...</span>
+      <span>Connecting to Google Sheets...</span>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════
-     MODAL (全局，模块共用)
-══════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="modal-overlay" onclick="Modal.closeOnOverlay(event)">
-  <div class="modal" id="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-title">标题</div>
-      <div class="modal-close" onclick="Modal.close()">✕</div>
-    </div>
-    <div class="modal-body" id="modal-body"></div>
-    <div class="modal-footer" id="modal-footer"></div>
-  </div>
-</div>
-
-<!-- Toast 通知容器 -->
+<!-- Toast Container -->
 <div id="toast-container"></div>
 
-<!-- ══════════════════════════════════════════════════════════
-     SCRIPTS (顺序重要!)
-══════════════════════════════════════════════════════════ -->
+<!-- Scripts -->
 <script src="config.js"></script>
 <script src="modules/api.js"></script>
 <script src="modules/ui.js"></script>

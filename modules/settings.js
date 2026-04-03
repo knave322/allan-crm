@@ -1,129 +1,131 @@
-// ============================================================
-// modules/settings.js — ⚙️ 设置 & 帮助模块
-// ⚠️  请勿修改此文件
-// ============================================================
+// modules/settings.js — Settings & Help
 
 const SettingsModule = (() => {
 
   async function render() {
-    const connected = API.isConnected();
-
     document.getElementById('page-content').innerHTML = `
-      <!-- API 连接状态 -->
-      <div class="card">
-        <div class="card-title" style="margin-bottom:14px">🔌 Google Sheets 连接状态</div>
-        <div class="alert-banner ${connected ? 'alert-success' : 'alert-danger'}">
-          ${connected
-            ? '✅ 已成功连接到 Google Sheets！数据正在同步。'
-            : '❌ 未连接到 Google Sheets。请检查 config.js 中的 API_URL 是否正确配置。'}
-        </div>
-        <div class="form-group" style="margin-top:16px">
-          <label class="form-label">当前 API URL（来自 config.js）</label>
-          <input type="text" value="${CONFIG.API_URL}" readonly style="color:var(--text-muted);cursor:not-allowed" />
-        </div>
-        <button class="btn btn-outline" onclick="SettingsModule.testConnection()">🔄 测试连接</button>
-      </div>
+      <div style="max-width:760px">
 
-      <!-- 系统信息 -->
-      <div class="card">
-        <div class="card-title" style="margin-bottom:14px">ℹ️ 系统信息</div>
-        <div class="form-grid">
-          <div><div class="form-label">系统名称</div><div>${CONFIG.SYSTEM.name}</div></div>
-          <div><div class="form-label">公司</div><div>${CONFIG.SYSTEM.company}</div></div>
-          <div><div class="form-label">顾问姓名</div><div>${CONFIG.SYSTEM.advisor}</div></div>
-          <div><div class="form-label">货币</div><div>${CONFIG.SYSTEM.currency}</div></div>
-          <div><div class="form-label">版本</div><div>v1.0.0 (2026)</div></div>
-          <div><div class="form-label">每页记录数</div><div>${CONFIG.PAGE_SIZE} 条</div></div>
-        </div>
-      </div>
-
-      <!-- 配置摘要 -->
-      <div class="card">
-        <div class="card-title" style="margin-bottom:14px">⚙️ 当前配置摘要</div>
-        <div class="form-grid">
-          <div>
-            <div class="form-label">保险公司列表（${CONFIG.INSURERS.length} 家）</div>
-            <div style="font-size:12px">${CONFIG.INSURERS.join(' / ')}</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🔌 Connection Status</div>
+            <button class="btn btn-outline btn-sm" onclick="SettingsModule.testConnection()">Test Connection</button>
           </div>
-          <div>
-            <div class="form-label">付款到期提醒</div>
-            <div>警告：${CONFIG.REMINDERS.payment_due_warning_days}天 / 危险：${CONFIG.REMINDERS.payment_due_danger_days}天</div>
-          </div>
-          <div>
-            <div class="form-label">保单续期提醒</div>
-            <div>${CONFIG.REMINDERS.policy_renewal_warning_days}天前提醒</div>
-          </div>
-          <div>
-            <div class="form-label">缓存时间</div>
-            <div>${CONFIG.CACHE_MINUTES} 分钟</div>
+          <div id="conn-status">
+            <div class="loading-overlay" style="padding:20px"><div class="spinner"></div></div>
           </div>
         </div>
-      </div>
 
-      <!-- 维护指南 -->
-      <div class="card">
-        <div class="card-title" style="margin-bottom:14px">📖 快速维护指南</div>
-        <div style="display:flex;flex-direction:column;gap:12px">
-          ${[
-            { icon:'1️⃣', title:'修改保险公司列表', desc:'打开 config.js → 找到 INSURERS 数组 → 添加或删除公司名称 → 保存文件' },
-            { icon:'2️⃣', title:'修改付款/理赔状态标签', desc:'打开 config.js → 找到 PAYMENT_STATUS / CLAIM_STATUS → 修改 label 值 → 保存' },
-            { icon:'3️⃣', title:'修改提醒天数', desc:'打开 config.js → 找到 REMINDERS 部分 → 修改天数数字 → 保存' },
-            { icon:'4️⃣', title:'更换 Google Sheets', desc:'部署新的 GAS → 复制新的 Web App URL → 粘贴到 config.js 的 API_URL → 保存' },
-            { icon:'5️⃣', title:'部署更新到 GitHub', desc:'修改文件后 → git add . → git commit -m "更新配置" → git push → 等待 GitHub Pages 自动更新' }
-          ].map(item => `
-            <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:var(--bg-base);border-radius:var(--radius-sm)">
-              <span style="font-size:20px;flex-shrink:0">${item.icon}</span>
-              <div>
-                <div class="fw-600 fs-13">${item.title}</div>
-                <div style="font-size:12px;color:var(--text-muted);margin-top:3px">${item.desc}</div>
-              </div>
-            </div>`).join('')}
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">⚙️ Current Configuration</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            ${[
+              ['System Name', CONFIG.SYSTEM.name],
+              ['Company', CONFIG.SYSTEM.company],
+              ['Advisor', CONFIG.SYSTEM.advisor],
+              ['Currency', CONFIG.SYSTEM.currency],
+              ['Timezone', CONFIG.SYSTEM.timezone],
+              ['Page Size', CONFIG.PAGE_SIZE + ' records/page'],
+              ['Cache Duration', CONFIG.CACHE_MINUTES + ' minutes'],
+              ['Payment Warning', CONFIG.REMINDERS.payment_due_warning_days + ' days before'],
+              ['Payment Danger', CONFIG.REMINDERS.payment_due_danger_days + ' days before'],
+              ['Insurers', CONFIG.INSURERS.join(', ')]
+            ].map(([k,v]) => `
+              <div style="background:var(--bg-base);padding:10px 14px;border-radius:6px;border:1px solid var(--border)">
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">${k}</div>
+                <div style="font-size:13px;font-weight:500;color:var(--text-primary)">${v}</div>
+              </div>`).join('')}
+          </div>
         </div>
-      </div>
 
-      <!-- 数据管理 -->
-      <div class="card">
-        <div class="card-title" style="margin-bottom:14px">📊 数据管理</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn btn-outline" onclick="SettingsModule.exportAll()">📥 导出全部数据（CSV）</button>
-          <button class="btn btn-outline" onclick="SettingsModule.clearCache()">🗑️ 清除本地缓存</button>
-          <button class="btn btn-outline" onclick="App.refreshData()">🔄 强制刷新数据</button>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">📖 How to Update Configuration</div>
+          <p style="color:var(--text-secondary);font-size:13.5px;line-height:1.8;margin-bottom:12px">
+            All customizable settings are in <strong>config.js</strong>. This is the only file you need to edit.
+          </p>
+          <div style="background:var(--bg-base);border-radius:8px;padding:14px;border:1px solid var(--border)">
+            <div style="font-size:12.5px;color:var(--text-secondary);line-height:2">
+              1. Open <strong>config.js</strong> in any text editor<br>
+              2. Make your changes (insurer names, status labels, reminder days, etc.)<br>
+              3. Save the file<br>
+              4. In GitHub Desktop → Commit → Push Origin<br>
+              5. Wait ~1 minute → refresh the CRM page
+            </div>
+          </div>
         </div>
-      </div>
 
-      <!-- 联系 & 支持 -->
-      <div class="card">
-        <div class="card-title" style="margin-bottom:14px">💬 技术支持</div>
-        <div class="alert-banner alert-info">
-          如需修改系统功能（非配置），请联系开发者或参考 README.md 文件中的维护说明。
-          <br/>所有用户配置修改只需编辑 <strong>config.js</strong> 文件，无需懂编程。
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">⌨️ Keyboard Shortcuts</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${[
+              ['Alt + 1', 'Dashboard'],
+              ['Alt + 2', 'Payment Tracker'],
+              ['Alt + 3', 'Claims Management'],
+              ['Alt + 4', 'Service Records'],
+              ['Escape',  'Close modal/dialog']
+            ].map(([k,v]) => `
+              <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--bg-base);border-radius:6px;border:1px solid var(--border)">
+                <kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:12px;font-family:monospace;color:var(--text-secondary)">${k}</kbd>
+                <span style="font-size:13px;color:var(--text-primary)">${v}</span>
+              </div>`).join('')}
+          </div>
         </div>
+
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">🔄 Data Management</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-outline" onclick="SettingsModule.clearCache()">🗑️ Clear Local Cache</button>
+            <button class="btn btn-outline" onclick="SettingsModule.exportAll()">📥 Export All Data</button>
+          </div>
+          <p style="color:var(--text-muted);font-size:12px;margin-top:10px">
+            Clearing cache forces fresh data from Google Sheets on next load.
+          </p>
+        </div>
+
       </div>`;
+
+    testConnection();
   }
 
   async function testConnection() {
-    UI.toast('正在测试连接...', 'info', 2000);
-    const ok = await API.testConnection();
-    if (ok) {
-      UI.toast('✅ 连接成功！Google Sheets 正在响应', 'success');
-    } else {
-      UI.toast('❌ 连接失败。请检查 config.js 中的 API_URL', 'error', 5000);
-    }
-  }
-
-  function exportAll() {
-    UI.toast('正在准备导出...', 'info');
-    // 触发每个模块的 CSV 导出
-    setTimeout(() => PaymentsModule.exportCSV(), 200);
-    setTimeout(() => ClaimsModule.exportCSV(), 800);
-    setTimeout(() => ServicingModule.exportCSV(), 1400);
+    const el = document.getElementById('conn-status');
+    if (el) el.innerHTML = '<div class="loading-overlay" style="padding:20px"><div class="spinner"></div><span>Testing connection...</span></div>';
+    const ok = await API.ping();
+    if (el) el.innerHTML = ok
+      ? `<div style="display:flex;align-items:center;gap:10px;padding:12px;background:#d1fae5;border-radius:8px;border:1px solid #6ee7b7">
+           <span style="font-size:20px">✅</span>
+           <div>
+             <div style="font-weight:600;color:#065f46">Connected to Google Sheets</div>
+             <div style="font-size:12px;color:#047857;margin-top:2px">API is responding normally</div>
+           </div>
+         </div>`
+      : `<div style="display:flex;align-items:center;gap:10px;padding:12px;background:#fee2e2;border-radius:8px;border:1px solid #fca5a5">
+           <span style="font-size:20px">❌</span>
+           <div>
+             <div style="font-weight:600;color:#991b1b">Connection Failed</div>
+             <div style="font-size:12px;color:#b91c1c;margin-top:2px">Check API_URL in config.js and ensure Apps Script is deployed</div>
+           </div>
+         </div>`;
   }
 
   function clearCache() {
-    API.clearCache();
-    UI.toast('本地缓存已清除', 'success');
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('crm_cache_')).forEach(k => localStorage.removeItem(k));
+      UI.toast('Cache cleared ✅', 'success');
+    } catch(e) { UI.toast('Could not clear cache', 'warning'); }
   }
 
-  return { render, testConnection, exportAll, clearCache };
+  async function exportAll() {
+    try {
+      const [payments, claims, servicing] = await Promise.all([
+        API.get('getPayments'), API.get('getClaims'), API.get('getServicing')
+      ]);
+      UI.exportCSV(payments, 'Payments');
+      setTimeout(() => UI.exportCSV(claims, 'Claims'), 500);
+      setTimeout(() => UI.exportCSV(servicing, 'Servicing'), 1000);
+      UI.toast('Exporting all data...', 'info');
+    } catch(e) { UI.toast('Export failed: ' + e.message, 'error'); }
+  }
 
+  return { render, testConnection, clearCache, exportAll };
 })();

@@ -1,78 +1,68 @@
-// ============================================================
-// modules/dashboard.js — 🏠 仪表板模块
-// ⚠️  请勿修改此文件
-// ============================================================
+// modules/dashboard.js — Dashboard Module
 
 const DashboardModule = (() => {
 
   async function render() {
     document.getElementById('page-content').innerHTML = `
-      <!-- 欢迎横幅 -->
       <div style="margin-bottom:20px">
         <h2 style="font-size:20px;font-weight:700">
-          你好，${CONFIG.SYSTEM.advisor} 👋
+          Welcome back, ${CONFIG.SYSTEM.advisor} 👋
         </h2>
         <p style="color:var(--text-muted);font-size:13px;margin-top:4px">
-          ${new Date().toLocaleDateString('zh-MY', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}
+          ${new Date().toLocaleDateString('en-MY', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}
         </p>
       </div>
 
-      <!-- 统计卡片 -->
       <div class="stats-grid" id="dash-stats">
         <div class="stat-card">
           <div class="stat-icon blue">💳</div>
           <div class="stat-info">
             <div class="stat-value" id="stat-payments">—</div>
-            <div class="stat-label">付款记录总数</div>
-            <div class="stat-sub" id="stat-overdue">加载中...</div>
+            <div class="stat-label">Total Payment Records</div>
+            <div class="stat-sub" id="stat-overdue">Loading...</div>
           </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon yellow">⏳</div>
           <div class="stat-info">
             <div class="stat-value" id="stat-upcoming">—</div>
-            <div class="stat-label">30天内到期付款</div>
-            <div class="stat-sub">需要跟进</div>
+            <div class="stat-label">Due Within 30 Days</div>
+            <div class="stat-sub">Needs follow-up</div>
           </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon green">🏥</div>
           <div class="stat-info">
             <div class="stat-value" id="stat-claims">—</div>
-            <div class="stat-label">理赔记录总数</div>
-            <div class="stat-sub" id="stat-claims-processing">加载中...</div>
+            <div class="stat-label">Total Claims</div>
+            <div class="stat-sub" id="stat-claims-processing">Loading...</div>
           </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon purple">🔧</div>
           <div class="stat-info">
             <div class="stat-value" id="stat-svc">—</div>
-            <div class="stat-label">服务记录总数</div>
-            <div class="stat-sub" id="stat-followup">加载中...</div>
+            <div class="stat-label">Total Service Records</div>
+            <div class="stat-sub" id="stat-followup">Loading...</div>
           </div>
         </div>
       </div>
 
-      <!-- 下方两栏 -->
       <div class="dash-grid">
-        <!-- 左：待办提醒 -->
         <div>
-          <!-- 付款提醒 -->
           <div class="card">
             <div class="card-header">
-              <div class="card-title">⏰ 即将到期付款</div>
-              <button class="btn btn-outline btn-sm" onclick="App.navigate('payments')">查看全部</button>
+              <div class="card-title">⏰ Upcoming Payments</div>
+              <button class="btn btn-outline btn-sm" onclick="App.navigate('payments')">View All</button>
             </div>
             <div id="dash-payment-reminders">
               <div class="loading-overlay" style="padding:30px"><div class="spinner"></div></div>
             </div>
           </div>
-
-          <!-- 跟进提醒 -->
           <div class="card">
             <div class="card-header">
-              <div class="card-title">🔔 待跟进服务</div>
-              <button class="btn btn-outline btn-sm" onclick="App.navigate('servicing')">查看全部</button>
+              <div class="card-title">🔔 Pending Follow-ups</div>
+              <button class="btn btn-outline btn-sm" onclick="App.navigate('servicing')">View All</button>
             </div>
             <div id="dash-followup-reminders">
               <div class="loading-overlay" style="padding:30px"><div class="spinner"></div></div>
@@ -80,179 +70,195 @@ const DashboardModule = (() => {
           </div>
         </div>
 
-        <!-- 右：理赔进行中 + 快捷操作 -->
         <div>
-          <!-- 快捷操作 -->
           <div class="card">
-            <div class="card-title" style="margin-bottom:14px">⚡ 快捷操作</div>
+            <div class="card-title" style="margin-bottom:14px">⚡ Quick Actions</div>
             <div style="display:flex;flex-direction:column;gap:10px">
               <button class="btn btn-primary" style="justify-content:flex-start;gap:10px"
                 onclick="PaymentsModule.openAddModal()">
-                💳 新增付款记录
+                💳 Add Payment Record
               </button>
               <button class="btn btn-outline" style="justify-content:flex-start;gap:10px"
                 onclick="ClaimsModule.openAddModal()">
-                🏥 新增理赔记录
+                🏥 Add Claim Record
               </button>
               <button class="btn btn-outline" style="justify-content:flex-start;gap:10px"
                 onclick="ServicingModule.openAddModal()">
-                🔧 新增服务记录
+                🔧 Add Service Record
               </button>
               <button class="btn btn-outline" style="justify-content:flex-start;gap:10px"
-                onclick="App.exportCSV()">
-                📥 导出当前数据
+                onclick="UI.exportTableToCSV('payments')">
+                📥 Export Data (CSV)
               </button>
             </div>
           </div>
 
-          <!-- 理赔进行中 -->
           <div class="card">
             <div class="card-header">
-              <div class="card-title">🏥 理赔进行中</div>
-              <button class="btn btn-outline btn-sm" onclick="App.navigate('claims')">查看全部</button>
+              <div class="card-title">🏥 Claims In Progress</div>
+              <button class="btn btn-outline btn-sm" onclick="App.navigate('claims')">View All</button>
             </div>
-            <div id="dash-active-claims">
-              <div class="loading-overlay" style="padding:30px"><div class="spinner"></div></div>
+            <div id="dash-claims-progress">
+              <div class="loading-overlay" style="padding:20px"><div class="spinner"></div></div>
             </div>
           </div>
         </div>
-      </div>`;
+      </div>
+    `;
 
-    // 加载所有模块数据（并行）
-    await Promise.all([
-      loadPaymentAlerts(),
-      loadClaimsActive(),
-      loadFollowupAlerts()
-    ]);
+    loadDashboardData();
   }
 
-  // ── 付款提醒 ─────────────────────────────────────────────
-  async function loadPaymentAlerts() {
+  async function loadDashboardData() {
     try {
-      // 触发 payments 模块加载（如还没加载）
-      if (typeof PaymentsModule !== 'undefined') {
-        await PaymentsModule.loadData();
-        const alerts = PaymentsModule.getAlerts();
-        const stats  = PaymentsModule.getStats();
+      const [payments, claims, servicing] = await Promise.all([
+        API.get('getPayments'),
+        API.get('getClaims'),
+        API.get('getServicing')
+      ]);
 
-        document.getElementById('stat-payments').textContent = stats.total;
-        document.getElementById('stat-overdue').textContent =
-          stats.overdue > 0 ? `⚠️ ${stats.overdue} 条逾期` : '无逾期';
-        document.getElementById('stat-upcoming').textContent = stats.upcoming;
-
-        const el = document.getElementById('dash-payment-reminders');
-        if (!el) return;
-
-        if (alerts.length === 0) {
-          el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">
-            ✅ 暂无即将到期的付款</div>`;
-          return;
-        }
-
-        el.innerHTML = `<div class="reminder-list">
-          ${alerts.slice(0, 8).map(r => {
-            const days = UI.daysUntil(r.next_due_date);
-            const isDanger = days !== null && days <= CONFIG.REMINDERS.payment_due_danger_days;
-            return `<div class="reminder-item ${isDanger ? 'danger' : ''}">
-              <div class="avatar" style="width:26px;height:26px;font-size:11px">${UI.avatarText(r.client_name)}</div>
-              <div class="ri-name">
-                ${r.client_name}
-                <div style="font-size:11px;color:var(--text-muted)">${r.insurer} · ${UI.currency(r.premium)}</div>
-              </div>
-              <div class="ri-days ${isDanger ? 'danger' : ''}">
-                ${days === 0 ? '今天到期！' : days < 0 ? `逾期${Math.abs(days)}天` : `${days}天后`}
-              </div>
-            </div>`;
-          }).join('')}
-          ${alerts.length > 8 ? `<div style="text-align:center;font-size:12px;color:var(--text-muted);padding:8px">
-            还有 ${alerts.length - 8} 条...</div>` : ''}
-        </div>`;
-      }
+      renderStats(payments, claims, servicing);
+      renderPaymentReminders(payments);
+      renderFollowupReminders(servicing);
+      renderClaimsProgress(claims);
     } catch (e) {
-      console.warn('Dashboard payment alerts error:', e);
+      console.error('Dashboard load error:', e);
+      // Try to use cached data
+      const cached = API.getCachedData('getPayments');
+      if (cached) {
+        document.getElementById('dash-payment-reminders').innerHTML =
+          '<div class="empty-state"><div class="empty-icon">📶</div><div class="empty-title">Offline Mode</div><div class="empty-sub">Showing cached data</div></div>';
+      }
     }
   }
 
-  // ── 跟进提醒 ─────────────────────────────────────────────
-  async function loadFollowupAlerts() {
-    try {
-      if (typeof ServicingModule !== 'undefined') {
-        await ServicingModule.loadData();
-        const followups = ServicingModule.getPendingFollowups();
-        const stats     = ServicingModule.getStats();
+  function renderStats(payments, claims, servicing) {
+    const now = new Date();
+    const in30 = new Date(now); in30.setDate(in30.getDate() + 30);
 
-        document.getElementById('stat-svc').textContent = stats.total;
-        document.getElementById('stat-followup').textContent =
-          stats.followup > 0 ? `🔔 ${stats.followup} 待跟进` : '无待跟进';
+    const overdue  = payments.filter(p => p.status === 'overdue').length;
+    const upcoming = payments.filter(p => {
+      const d = new Date(p.next_due_date);
+      return p.status === 'pending' && d >= now && d <= in30;
+    }).length;
+    const processing = claims.filter(c => ['submitted','processing','approved'].includes(c.status)).length;
+    const followup   = servicing.filter(s => s.status === 'followup').length;
 
-        const el = document.getElementById('dash-followup-reminders');
-        if (!el) return;
-
-        if (followups.length === 0) {
-          el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">
-            ✅ 暂无逾期跟进记录</div>`;
-          return;
-        }
-
-        el.innerHTML = `<div class="reminder-list">
-          ${followups.slice(0, 6).map(r => {
-            const days = UI.daysUntil(r.next_followup);
-            const overdue = days !== null && days < 0;
-            return `<div class="reminder-item ${overdue ? 'danger' : ''}">
-              <div class="avatar" style="width:26px;height:26px;font-size:11px">${UI.avatarText(r.client_name)}</div>
-              <div class="ri-name">
-                ${r.client_name}
-                <div style="font-size:11px;color:var(--text-muted)">${r.service_type}</div>
-              </div>
-              <div class="ri-days ${overdue ? 'danger' : ''}">
-                ${overdue ? `逾期${Math.abs(days)}天` : `${days}天后`}
-              </div>
-            </div>`;
-          }).join('')}
-        </div>`;
-      }
-    } catch (e) {
-      console.warn('Dashboard followup alerts error:', e);
-    }
+    document.getElementById('stat-payments').textContent = payments.length;
+    document.getElementById('stat-overdue').innerHTML = overdue > 0
+      ? `<span class="text-danger">⚠ ${overdue} overdue</span>` : '✓ All up to date';
+    document.getElementById('stat-upcoming').textContent = upcoming;
+    document.getElementById('stat-claims').textContent = claims.length;
+    document.getElementById('stat-claims-processing').textContent = `${processing} in progress`;
+    document.getElementById('stat-svc').textContent = servicing.length;
+    document.getElementById('stat-followup').textContent = `${followup} pending follow-up`;
   }
 
-  // ── 进行中理赔 ────────────────────────────────────────────
-  async function loadClaimsActive() {
-    try {
-      if (typeof ClaimsModule !== 'undefined') {
-        await ClaimsModule.loadData();
-        const stats = ClaimsModule.getStats();
+  function renderPaymentReminders(payments) {
+    const now = new Date();
+    const in30 = new Date(now); in30.setDate(in30.getDate() + 30);
 
-        document.getElementById('stat-claims').textContent = stats.total;
-        document.getElementById('stat-claims-processing').textContent =
-          stats.processing > 0 ? `🔄 ${stats.processing} 件审核中` : '无待处理';
+    const items = payments
+      .filter(p => {
+        if (p.status === 'overdue') return true;
+        if (p.status === 'pending') {
+          const d = new Date(p.next_due_date);
+          return d >= now && d <= in30;
+        }
+        return false;
+      })
+      .sort((a, b) => new Date(a.next_due_date) - new Date(b.next_due_date))
+      .slice(0, 5);
 
-        const el = document.getElementById('dash-active-claims');
-        if (!el) return;
+    const el = document.getElementById('dash-payment-reminders');
+    if (!items.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-icon">✅</div><div class="empty-title">No upcoming payments</div></div>';
+      return;
+    }
 
-        // 从 ClaimsModule 的内部数据里取进行中的理赔
-        // 由于 _data 是私有变量，通过 getStats 的方式间接展示
-        el.innerHTML = `
-          <div style="display:flex;gap:12px;flex-wrap:wrap">
-            ${Object.entries(CONFIG.CLAIM_STATUS).map(([k, v]) => {
-              // 这里需要实际数量，暂时用样式展示
-              return `<div style="text-align:center;flex:1;min-width:70px">
-                <div style="font-size:20px">${v.icon}</div>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${v.label}</div>
-              </div>`;
-            }).join('')}
+    el.innerHTML = items.map(p => {
+      const due = new Date(p.next_due_date);
+      const diff = Math.ceil((due - now) / 86400000);
+      const isOverdue = p.status === 'overdue' || diff < 0;
+      const cls = isOverdue ? 'danger' : diff <= 7 ? 'warning' : 'success';
+      const label = isOverdue ? `Overdue ${Math.abs(diff)}d` : `Due in ${diff}d`;
+      const initials = p.client_name ? p.client_name.substring(0,2).toUpperCase() : '??';
+      return `
+        <div class="reminder-item" onclick="App.navigate('payments')">
+          <div class="reminder-avatar ${cls}">${initials}</div>
+          <div class="reminder-info">
+            <div class="reminder-name">${p.client_name}</div>
+            <div class="reminder-detail">${p.insurer} · ${CONFIG.SYSTEM.currency} ${Number(p.premium||0).toFixed(2)}</div>
           </div>
-          <div class="alert-banner alert-info" style="margin-top:12px">
-            📊 共 <strong>${stats.total}</strong> 条理赔记录，
-            <strong>${stats.processing}</strong> 件审核中，
-            <strong>${stats.approved}</strong> 件已处理
-          </div>`;
-      }
-    } catch (e) {
-      console.warn('Dashboard claims error:', e);
+          <div class="reminder-badge ${cls}">${label}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderFollowupReminders(servicing) {
+    const items = servicing
+      .filter(s => s.status === 'followup' || (s.next_followup && new Date(s.next_followup) <= new Date(Date.now() + 7*86400000)))
+      .sort((a, b) => new Date(a.next_followup) - new Date(b.next_followup))
+      .slice(0, 4);
+
+    const el = document.getElementById('dash-followup-reminders');
+    if (!items.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-icon">✅</div><div class="empty-title">No pending follow-ups</div></div>';
+      return;
     }
+
+    const now = new Date();
+    el.innerHTML = items.map(s => {
+      const due = s.next_followup ? new Date(s.next_followup) : null;
+      const diff = due ? Math.ceil((due - now) / 86400000) : null;
+      const cls = diff !== null ? (diff < 0 ? 'danger' : diff <= 3 ? 'warning' : 'success') : 'warning';
+      const label = diff !== null ? (diff < 0 ? `Overdue ${Math.abs(diff)}d` : `In ${diff}d`) : 'Pending';
+      const initials = s.client_name ? s.client_name.substring(0,2).toUpperCase() : '??';
+      return `
+        <div class="reminder-item" onclick="App.navigate('servicing')">
+          <div class="reminder-avatar ${cls}">${initials}</div>
+          <div class="reminder-info">
+            <div class="reminder-name">${s.client_name}</div>
+            <div class="reminder-detail">${s.service_type || 'Service'}</div>
+          </div>
+          <div class="reminder-badge ${cls}">${label}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderClaimsProgress(claims) {
+    const active = claims.filter(c => ['submitted','processing','approved'].includes(c.status));
+    const el = document.getElementById('dash-claims-progress');
+
+    if (!active.length) {
+      el.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-icon">✅</div><div class="empty-title">No active claims</div></div>';
+      return;
+    }
+
+    const statusMap = { submitted:'Submitted', processing:'Processing', approved:'Approved' };
+    const claimStatusCounts = {};
+    CONFIG.CLAIM_STATUS.forEach(s => { claimStatusCounts[s.value] = 0; });
+    claims.forEach(c => { if (claimStatusCounts[c.status] !== undefined) claimStatusCounts[c.status]++; });
+
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+        ${Object.entries(claimStatusCounts).filter(([k]) => ['draft','submitted','processing','approved','paid_out','rejected'].includes(k)).map(([k,v]) => {
+          const s = CONFIG.CLAIM_STATUS.find(x => x.value === k);
+          return `<div style="text-align:center;padding:10px;border-radius:8px;background:var(--bg-base);border:1px solid var(--border)">
+            <div style="font-size:18px;font-weight:700;color:var(--text-primary)">${v}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${s ? s.label : k}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      ${active.slice(0,3).map(c => `
+        <div class="reminder-item">
+          <div class="reminder-info">
+            <div class="reminder-name">${c.client_name} — ${c.claim_type || 'Claim'}</div>
+            <div class="reminder-detail">${c.insurer} · ${UI.badge(c.status, CONFIG.CLAIM_STATUS)}</div>
+          </div>
+        </div>`).join('')}
+    `;
   }
 
   return { render };
-
 })();

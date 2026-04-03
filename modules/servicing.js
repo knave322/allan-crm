@@ -1,299 +1,146 @@
-// ============================================================
-// modules/servicing.js — 🔧 服务记录模块
-// ⚠️  请勿修改此文件。标签/状态请在 config.js 修改
-// ============================================================
+// modules/servicing.js — Service Records
 
 const ServicingModule = (() => {
+  let _data = [], _currentPage = 1, _filterStatus = '', _filterSearch = '';
 
-  let _data = [];
-  let _currentPage = 1;
-  let _filterStatus = '';
-  let _filterSearch = '';
-  let _filterType   = '';
-
-  // ── 渲染主页面 ────────────────────────────────────────────
   async function render() {
     document.getElementById('page-content').innerHTML = `
-      <!-- 统计卡片 -->
-      <div class="stats-grid" id="svc-stats"></div>
-
       <div class="card">
         <div class="card-header">
-          <div class="card-title">🔧 服务记录</div>
-          <button class="btn btn-primary" onclick="ServicingModule.openAddModal()">
-            ＋ 新增服务记录
-          </button>
-        </div>
-
-        <!-- 筛选 -->
-        <div class="filter-bar">
-          <div class="search-box">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="svc-search" placeholder="搜索客户姓名 / 服务内容..."
-              oninput="ServicingModule.onSearch(this.value)" />
+          <div class="card-title">🔧 Service Records</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="ServicingModule.exportCSV()">📥 Export CSV</button>
+            <button class="btn btn-primary" onclick="ServicingModule.openAddModal()">+ Add Service Record</button>
           </div>
-          <select id="svc-status-filter" onchange="ServicingModule.onFilter(this.value)" style="width:auto;min-width:140px">
-            <option value="">全部状态</option>
-            ${UI.buildStatusOptions(CONFIG.SERVICE_STATUS)}
-          </select>
-          <select id="svc-type-filter" onchange="ServicingModule.onType(this.value)" style="width:auto;min-width:180px">
-            <option value="">全部服务类别</option>
-            ${CONFIG.SERVICE_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
+        </div>
+        <div class="filters-bar">
+          <input class="search-input" type="text" id="svc-search" placeholder="Search client / service type..."
+            oninput="ServicingModule.onSearch(this.value)" />
+          <select class="form-control" onchange="ServicingModule.onFilter(this.value)" style="width:auto">
+            <option value="">All Status</option>
+            ${CONFIG.SERVICE_STATUS.map(s => `<option value="${s.value}">${s.label}</option>`).join('')}
           </select>
         </div>
-
-        <!-- 切换：表格 / 时间线 -->
-        <div class="tab-bar" style="margin-bottom:16px">
-          <div class="tab-btn active" id="tab-table" onclick="ServicingModule.switchView('table')">📋 列表视图</div>
-          <div class="tab-btn" id="tab-timeline" onclick="ServicingModule.switchView('timeline')">📅 时间线视图</div>
-        </div>
-
         <div id="svc-table-wrap">
-          <div class="loading-overlay"><div class="spinner"></div><span>加载服务记录...</span></div>
+          <div class="loading-overlay"><div class="spinner"></div><span>Loading service records...</span></div>
         </div>
       </div>`;
-
     await loadData();
   }
 
-  let _currentView = 'table';
-
-  // ── 加载数据 ──────────────────────────────────────────────
   async function loadData() {
     try {
-      const res = await API.getServicing();
-      _data = res.data || [];
-      renderStats();
-      renderView();
+      const res = await API.get('getServicing');
+      _data = Array.isArray(res) ? res : (res.data || []);
+      renderTable();
     } catch (e) {
-      document.getElementById('svc-table-wrap').innerHTML =
-        UI.emptyState('⚠️', '无法加载服务记录', '请检查 API_URL 设置');
+      document.getElementById('svc-table-wrap').innerHTML = `
+        <div class="empty-state"><div class="empty-icon">⚠️</div>
+        <div class="empty-title">Could not load service data</div>
+        <div class="empty-sub">${e.message}</div></div>`;
     }
   }
 
-  // ── 统计 ──────────────────────────────────────────────────
-  function renderStats() {
-    const el = document.getElementById('svc-stats');
-    if (!el) return;
-    const s = getStats();
-    el.innerHTML = `
-      <div class="stat-card">
-        <div class="stat-icon blue">🔧</div>
-        <div class="stat-info">
-          <div class="stat-value">${s.total}</div>
-          <div class="stat-label">总服务记录</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon green">✅</div>
-        <div class="stat-info">
-          <div class="stat-value">${s.completed}</div>
-          <div class="stat-label">已完成</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon yellow">🔔</div>
-        <div class="stat-info">
-          <div class="stat-value">${s.followup}</div>
-          <div class="stat-label">待跟进</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon blue">📅</div>
-        <div class="stat-info">
-          <div class="stat-value">${s.thisMonth}</div>
-          <div class="stat-label">本月服务</div>
-        </div>
-      </div>`;
-  }
-
-  // ── 切换视图 ──────────────────────────────────────────────
-  function switchView(view) {
-    _currentView = view;
-    document.getElementById('tab-table').classList.toggle('active', view === 'table');
-    document.getElementById('tab-timeline').classList.toggle('active', view === 'timeline');
-    renderView();
-  }
-
-  function renderView() {
-    if (_currentView === 'timeline') renderTimeline();
-    else renderTable();
-  }
-
-  // ── 表格视图 ──────────────────────────────────────────────
-  function renderTable() {
-    const filtered = filterData().sort((a, b) =>
-      new Date(b.service_date) - new Date(a.service_date));
-    const total = filtered.length;
-    const paged = filtered.slice(
-      (_currentPage - 1) * CONFIG.PAGE_SIZE,
-      _currentPage * CONFIG.PAGE_SIZE
+  function filterData() {
+    return _data.filter(r =>
+      (!_filterSearch || [r.client_name, r.service_type, r.summary].some(v => (v||'').toLowerCase().includes(_filterSearch.toLowerCase()))) &&
+      (!_filterStatus || r.status === _filterStatus)
     );
+  }
 
+  function renderTable() {
+    const filtered = filterData();
+    const paged = UI.paginate(filtered, _currentPage, CONFIG.PAGE_SIZE);
     const wrap = document.getElementById('svc-table-wrap');
     if (!wrap) return;
 
-    if (paged.length === 0) {
-      wrap.innerHTML = UI.emptyState('🔧', '没有找到服务记录', '点击「新增服务记录」开始添加');
+    if (!paged.items.length) {
+      wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">🔧</div><div class="empty-title">No service records found</div><div class="empty-sub">Click "Add Service Record" to get started</div></div>`;
       return;
     }
 
     wrap.innerHTML = `
-      <div class="table-wrap">
+      <div class="table-container">
         <table>
-          <thead>
-            <tr>
-              <th>客户姓名</th>
-              <th>服务日期</th>
-              <th>服务类别</th>
-              <th>服务内容摘要</th>
-              <th>下次跟进</th>
-              <th>状态</th>
-              <th>跟进人员</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${paged.map(row => renderRow(row)).join('')}
-          </tbody>
+          <thead><tr>
+            <th>Client</th><th>Service Date</th><th>Service Type</th>
+            <th>Summary</th><th>Next Follow-up</th><th>Handled By</th>
+            <th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody>${paged.items.map(r => renderRow(r)).join('')}</tbody>
         </table>
       </div>
-      ${UI.renderPagination(total, _currentPage, CONFIG.PAGE_SIZE, (p) => {
-        _currentPage = p;
-        renderTable();
-      })}`;
+      ${UI.paginationHTML(paged, 'ServicingModule.goPage')}`;
   }
 
-  function renderRow(row) {
-    const daysToFollowup = UI.daysUntil(row.next_followup);
-    const followupStyle = daysToFollowup !== null && daysToFollowup < 0
-      ? 'color:var(--danger);font-weight:600'
-      : daysToFollowup !== null && daysToFollowup <= 7
-        ? 'color:var(--warning);font-weight:500' : '';
-
+  function renderRow(r) {
+    const initials = (r.client_name||'?').substring(0,2).toUpperCase();
+    const days = UI.daysUntil(r.next_followup);
+    const followupStyle = days !== null && days < 0 ? 'color:var(--danger);font-weight:600'
+      : days !== null && days <= 7 ? 'color:var(--warning);font-weight:500' : '';
     return `<tr>
-      <td>
-        <div class="flex-center gap-8">
-          <div class="avatar">${UI.avatarText(row.client_name)}</div>
-          <span class="fw-500">${row.client_name || '—'}</span>
-        </div>
-      </td>
-      <td class="td-muted">${UI.formatDate(row.service_date)}</td>
-      <td>
-        <span style="background:var(--bg-hover);padding:2px 8px;border-radius:4px;font-size:12px">
-          ${row.service_type || '—'}
-        </span>
-      </td>
-      <td style="max-width:200px;white-space:normal;font-size:12px">
-        ${(row.summary || '—').substring(0, 80)}${(row.summary || '').length > 80 ? '...' : ''}
-      </td>
-      <td style="${followupStyle}">
-        ${UI.formatDate(row.next_followup)}
-        ${daysToFollowup !== null ? `<br><small>${UI.formatDateRelative(row.next_followup)}</small>` : ''}
-      </td>
-      <td>${UI.statusBadge(CONFIG.SERVICE_STATUS, row.status)}</td>
-      <td class="td-muted">${row.handled_by || CONFIG.SYSTEM.advisor}</td>
-      <td>
-        <div class="td-actions">
-          <button class="btn btn-outline btn-sm" onclick="ServicingModule.openEditModal('${row.id}')" title="编辑">✏️</button>
-          <button class="btn btn-outline btn-sm" onclick="ServicingModule.markComplete('${row.id}')" title="标记完成">✅</button>
-          <button class="btn btn-outline btn-sm" onclick="ServicingModule.confirmDelete('${row.id}')" style="color:var(--danger)" title="删除">🗑️</button>
-        </div>
-      </td>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div style="width:30px;height:30px;border-radius:50%;background:var(--purple);color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${initials}</div>
+        <span style="font-weight:500">${r.client_name||'—'}</span>
+      </div></td>
+      <td style="color:var(--text-muted)">${UI.date(r.service_date)}</td>
+      <td>${r.service_type||'—'}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary);font-size:12px">${r.summary||'—'}</td>
+      <td style="${followupStyle}">${UI.date(r.next_followup)}</td>
+      <td style="color:var(--text-muted)">${r.handled_by||'—'}</td>
+      <td>${UI.badge(r.status, CONFIG.SERVICE_STATUS)}</td>
+      <td><div style="display:flex;gap:4px">
+        <button class="btn btn-outline btn-sm" onclick="ServicingModule.openEditModal('${r.id}')" title="Edit">✏️</button>
+        <button class="btn btn-success btn-sm" onclick="ServicingModule.markCompleted('${r.id}')" title="Mark Completed">✅</button>
+        <button class="btn btn-danger btn-sm" onclick="ServicingModule.confirmDelete('${r.id}')" title="Delete">🗑️</button>
+      </div></td>
     </tr>`;
   }
 
-  // ── 时间线视图 ────────────────────────────────────────────
-  function renderTimeline() {
-    const filtered = filterData().sort((a, b) =>
-      new Date(b.service_date) - new Date(a.service_date));
-    const wrap = document.getElementById('svc-table-wrap');
-    if (!wrap) return;
+  function goPage(p) { _currentPage = p; renderTable(); }
+  function onSearch(v) { _filterSearch = v; _currentPage = 1; renderTable(); }
+  function onFilter(v) { _filterStatus = v; _currentPage = 1; renderTable(); }
 
-    if (filtered.length === 0) {
-      wrap.innerHTML = UI.emptyState('📅', '没有找到服务记录');
-      return;
-    }
-
-    const statusIcons = { completed: '✅', scheduled: '📅', followup: '🔔', cancelled: '❌' };
-
-    wrap.innerHTML = `<div class="timeline" style="padding:4px 0">
-      ${filtered.slice(0, 30).map(row => `
-        <div class="tl-item">
-          <div class="tl-dot">${statusIcons[row.status] || '🔧'}</div>
-          <div class="tl-body">
-            <div class="flex-center gap-8" style="flex-wrap:wrap">
-              <span class="tl-title">${row.client_name}</span>
-              <span style="font-size:11px;background:var(--bg-hover);padding:1px 6px;border-radius:3px">${row.service_type || '—'}</span>
-              ${UI.statusBadge(CONFIG.SERVICE_STATUS, row.status)}
-            </div>
-            <div class="tl-meta">${UI.formatDate(row.service_date)} · 服务人员：${row.handled_by || CONFIG.SYSTEM.advisor}</div>
-            ${row.summary ? `<div class="tl-note">${row.summary}</div>` : ''}
-            ${row.next_followup ? `<div class="tl-meta" style="margin-top:4px">📅 下次跟进：${UI.formatDate(row.next_followup)} (${UI.formatDateRelative(row.next_followup)})</div>` : ''}
-          </div>
-          <button class="btn btn-outline btn-sm" onclick="ServicingModule.openEditModal('${row.id}')">✏️</button>
-        </div>`).join('')}
-    </div>`;
-  }
-
-  // ── 筛选 ──────────────────────────────────────────────────
-  function filterData() {
-    return _data.filter(row => {
-      const s = _filterSearch.toLowerCase();
-      const matchSearch = !s ||
-        (row.client_name || '').toLowerCase().includes(s) ||
-        (row.summary     || '').toLowerCase().includes(s);
-      const matchStatus = !_filterStatus || row.status === _filterStatus;
-      const matchType   = !_filterType   || row.service_type === _filterType;
-      return matchSearch && matchStatus && matchType;
-    });
-  }
-
-  function onSearch(v) { _filterSearch = v; _currentPage = 1; renderView(); }
-  function onFilter(v) { _filterStatus = v; _currentPage = 1; renderView(); }
-  function onType(v)   { _filterType   = v; _currentPage = 1; renderView(); }
-
-  // ── 表单 ──────────────────────────────────────────────────
-  function buildForm(data = {}) {
+  function buildForm(d = {}) {
     return `
-      <div class="form-grid">
+      <div class="form-row">
         <div class="form-group">
-          <label class="form-label">客户姓名 <span class="required">*</span></label>
-          <input type="text" id="f-client-name" value="${data.client_name || ''}" placeholder="例：张伟强" />
+          <label class="form-label">Client Name *</label>
+          <input class="form-control" type="text" id="f-client-name" value="${d.client_name||''}" placeholder="Client full name" />
         </div>
         <div class="form-group">
-          <label class="form-label">服务日期 <span class="required">*</span></label>
-          <input type="date" id="f-service-date" value="${data.service_date || new Date().toISOString().slice(0,10)}" />
+          <label class="form-label">Service Date *</label>
+          <input class="form-control" type="date" id="f-service-date" value="${d.service_date||new Date().toISOString().slice(0,10)}" />
         </div>
         <div class="form-group">
-          <label class="form-label">服务类别 <span class="required">*</span></label>
-          <select id="f-service-type">
-            <option value="">-- 请选择 --</option>
-            ${UI.buildOptions(CONFIG.SERVICE_TYPES, data.service_type)}
+          <label class="form-label">Service Type *</label>
+          <select class="form-control" id="f-service-type">
+            <option value="">-- Select --</option>
+            ${CONFIG.SERVICE_TYPES.map(t => `<option value="${t}"${d.service_type===t?' selected':''}>${t}</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">状态</label>
-          <select id="f-status">
-            ${UI.buildStatusOptions(CONFIG.SERVICE_STATUS, data.status || 'completed')}
+          <label class="form-label">Status</label>
+          <select class="form-control" id="f-status">
+            ${CONFIG.SERVICE_STATUS.map(s => `<option value="${s.value}"${(d.status||'scheduled')===s.value?' selected':''}>${s.label}</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">下次跟进日期</label>
-          <input type="date" id="f-next-followup" value="${data.next_followup || ''}" />
+          <label class="form-label">Next Follow-up Date</label>
+          <input class="form-control" type="date" id="f-next-followup" value="${d.next_followup||''}" />
         </div>
         <div class="form-group">
-          <label class="form-label">服务人员</label>
-          <input type="text" id="f-handled-by" value="${data.handled_by || CONFIG.SYSTEM.advisor}" />
+          <label class="form-label">Handled By</label>
+          <input class="form-control" type="text" id="f-handled-by" value="${d.handled_by||CONFIG.SYSTEM.advisor}" placeholder="Advisor name" />
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">服务内容摘要 <span class="required">*</span></label>
-        <textarea id="f-summary" placeholder="详细描述本次服务的内容、讨论要点、客户反馈...">${data.summary || ''}</textarea>
+        <label class="form-label">Summary *</label>
+        <textarea class="form-control" id="f-summary" placeholder="What was discussed / done...">${d.summary||''}</textarea>
       </div>
       <div class="form-group">
-        <label class="form-label">跟进行动计划</label>
-        <textarea id="f-action" placeholder="下次跟进需要准备什么？给客户发什么资料？..." style="min-height:60px">${data.action_plan || ''}</textarea>
+        <label class="form-label">Action Plan</label>
+        <textarea class="form-control" id="f-action-plan" placeholder="Next steps / action items...">${d.action_plan||''}</textarea>
       </div>`;
   }
 
@@ -302,136 +149,76 @@ const ServicingModule = (() => {
     const serviceDate = document.getElementById('f-service-date').value;
     const serviceType = document.getElementById('f-service-type').value;
     const summary     = document.getElementById('f-summary').value.trim();
-
-    if (!clientName)  { UI.toast('请填写客户姓名', 'warning'); return null; }
-    if (!serviceDate) { UI.toast('请填写服务日期', 'warning'); return null; }
-    if (!serviceType) { UI.toast('请选择服务类别', 'warning'); return null; }
-    if (!summary)     { UI.toast('请填写服务内容摘要', 'warning'); return null; }
-
+    if (!clientName)  { UI.toast('Please enter client name', 'warning'); return null; }
+    if (!serviceDate) { UI.toast('Please select service date', 'warning'); return null; }
+    if (!serviceType) { UI.toast('Please select service type', 'warning'); return null; }
+    if (!summary)     { UI.toast('Please enter a summary', 'warning'); return null; }
     return {
-      client_name:   clientName,
-      service_date:  serviceDate,
-      service_type:  serviceType,
-      status:        document.getElementById('f-status').value,
+      client_name:   clientName, service_date: serviceDate,
+      service_type:  serviceType, summary,
+      action_plan:   document.getElementById('f-action-plan').value.trim(),
       next_followup: document.getElementById('f-next-followup').value,
-      handled_by:    document.getElementById('f-handled-by').value.trim(),
-      summary,
-      action_plan:   document.getElementById('f-action').value.trim()
+      status:        document.getElementById('f-status').value,
+      handled_by:    document.getElementById('f-handled-by').value.trim()
     };
   }
 
-  // ── 新增 ──────────────────────────────────────────────────
   function openAddModal() {
-    Modal.open('新增服务记录', buildForm(), [
-      { label: '取消', class: 'btn-outline', fn: () => Modal.close() },
-      { label: '💾 保存', class: 'btn-primary', fn: saveAdd }
-    ]);
+    UI.showModal('Add Service Record', buildForm(),
+      `<button class="btn btn-outline" onclick="UI.closeModal()">Cancel</button>
+       <button class="btn btn-primary" onclick="ServicingModule.saveAdd()">💾 Save</button>`);
   }
 
   async function saveAdd() {
-    const data = getFormData();
-    if (!data) return;
+    const data = getFormData(); if (!data) return;
     try {
-      await API.addServicing(data);
-      Modal.close();
-      UI.toast('服务记录已保存！', 'success');
-      await loadData();
-    } catch (e) {
-      UI.toast('保存失败：' + e.message, 'error');
-    }
+      await API.post('addServicing', data);
+      UI.closeModal(); UI.toast('Service record added! ✅', 'success'); await loadData();
+    } catch (e) { UI.toast('Save failed: ' + e.message, 'error'); }
   }
 
-  // ── 编辑 ──────────────────────────────────────────────────
   function openEditModal(id) {
-    const row = _data.find(r => String(r.id) === String(id));
-    if (!row) return;
-    Modal.open('编辑服务记录', buildForm(row), [
-      { label: '取消', class: 'btn-outline', fn: () => Modal.close() },
-      { label: '💾 保存修改', class: 'btn-primary', fn: () => saveEdit(id) }
-    ]);
+    const row = _data.find(r => String(r.id) === String(id)); if (!row) return;
+    UI.showModal('Edit Service Record', buildForm(row),
+      `<button class="btn btn-outline" onclick="UI.closeModal()">Cancel</button>
+       <button class="btn btn-primary" onclick="ServicingModule.saveEdit('${id}')">💾 Save Changes</button>`);
   }
 
   async function saveEdit(id) {
-    const data = getFormData();
-    if (!data) return;
+    const data = getFormData(); if (!data) return;
     try {
-      await API.updateServicing(id, data);
-      Modal.close();
-      UI.toast('服务记录已更新！', 'success');
-      await loadData();
-    } catch (e) {
-      UI.toast('更新失败：' + e.message, 'error');
-    }
+      await API.post('updateServicing', { id, ...data });
+      UI.closeModal(); UI.toast('Service record updated! ✅', 'success'); await loadData();
+    } catch (e) { UI.toast('Update failed: ' + e.message, 'error'); }
   }
 
-  // ── 标记完成 ──────────────────────────────────────────────
-  async function markComplete(id) {
+  async function markCompleted(id) {
     try {
-      await API.updateServicing(id, { status: 'completed' });
-      UI.toast('已标记为「已完成」✅', 'success');
-      await loadData();
-    } catch (e) {
-      UI.toast('操作失败', 'error');
-    }
+      await API.post('updateServicing', { id, status: 'completed' });
+      UI.toast('Marked as Completed ✅', 'success'); await loadData();
+    } catch (e) { UI.toast('Action failed', 'error'); }
   }
 
-  // ── 删除 ──────────────────────────────────────────────────
   function confirmDelete(id) {
-    UI.confirm('确定要删除这条服务记录吗？', () => deleteRecord(id));
+    UI.confirm('Delete this service record? This cannot be undone.', () => deleteRecord(id));
   }
 
   async function deleteRecord(id) {
     try {
-      await API.deleteServicing(id);
-      UI.toast('记录已删除', 'success');
-      await loadData();
-    } catch (e) {
-      UI.toast('删除失败', 'error');
-    }
+      await API.post('deleteServicing', { id });
+      UI.toast('Record deleted', 'success'); await loadData();
+    } catch (e) { UI.toast('Delete failed', 'error'); }
   }
 
-  // ── 统计 ──────────────────────────────────────────────────
-  function getStats() {
-    const now = new Date();
-    const thisMonth = _data.filter(r => {
-      const d = new Date(r.service_date);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    }).length;
-    return {
-      total:     _data.length,
-      completed: _data.filter(r => r.status === 'completed').length,
-      followup:  _data.filter(r => r.status === 'followup').length,
-      thisMonth
-    };
-  }
-
-  // ── 获取待跟进提醒（供仪表板用）─────────────────────────
-  function getPendingFollowups() {
-    return _data.filter(r => {
-      if (r.status === 'completed' || r.status === 'cancelled') return false;
-      const days = UI.daysUntil(r.next_followup);
-      return days !== null && days <= CONFIG.REMINDERS.follow_up_overdue_days;
-    }).sort((a, b) => new Date(a.next_followup) - new Date(b.next_followup));
-  }
-
-  // ── 导出 CSV ──────────────────────────────────────────────
   function exportCSV() {
-    UI.exportToCSV(filterData().map(r => ({
-      '客户姓名': r.client_name,
-      '服务日期': r.service_date,
-      '服务类别': r.service_type,
-      '内容摘要': r.summary,
-      '行动计划': r.action_plan,
-      '下次跟进': r.next_followup,
-      '状态':     CONFIG.SERVICE_STATUS[r.status]?.label || r.status,
-      '服务人员': r.handled_by
+    UI.exportCSV(filterData().map(r => ({
+      'Client': r.client_name, 'Service Date': r.service_date,
+      'Service Type': r.service_type, 'Summary': r.summary,
+      'Action Plan': r.action_plan, 'Next Follow-up': r.next_followup,
+      'Handled By': r.handled_by,
+      'Status': (CONFIG.SERVICE_STATUS.find(s=>s.value===r.status)||{label:r.status}).label
     })), 'Servicing');
   }
 
-  return {
-    render, loadData, exportCSV, getStats, getPendingFollowups,
-    openAddModal, openEditModal, markComplete, confirmDelete,
-    onSearch, onFilter, onType, switchView
-  };
-
+  return { render, loadData, exportCSV, openAddModal, openEditModal, saveAdd, saveEdit, markCompleted, confirmDelete, goPage, onSearch, onFilter };
 })();

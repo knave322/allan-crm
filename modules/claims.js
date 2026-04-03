@@ -64,8 +64,8 @@ const ClaimsModule = (() => {
         <table>
           <thead><tr>
             <th>Client</th><th>Claim No.</th><th>Insurer</th><th>Type</th>
-            <th>Claim Amount</th><th>Submit Date</th><th>Last Update</th>
-            <th>Status</th><th>Actions</th>
+            <th>Claim Amount</th><th>Approved</th><th>Submit Date</th>
+            <th>Status</th><th>Docs</th><th>Actions</th>
           </tr></thead>
           <tbody>${paged.items.map(r => renderRow(r)).join('')}</tbody>
         </table>
@@ -75,6 +75,9 @@ const ClaimsModule = (() => {
 
   function renderRow(r) {
     const initials = (r.client_name||'?').substring(0,2).toUpperCase();
+    const docsBtn = r.documents_link && r.documents_link !== 'nan'
+      ? `<a href="${r.documents_link}" target="_blank" class="btn btn-outline btn-sm" title="Open Documents">📂</a>`
+      : `<span style="color:var(--text-muted);font-size:12px">—</span>`;
     return `<tr>
       <td><div style="display:flex;align-items:center;gap:8px">
         <div style="width:30px;height:30px;border-radius:50%;background:var(--success);color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${initials}</div>
@@ -82,11 +85,12 @@ const ClaimsModule = (() => {
       </div></td>
       <td style="color:var(--text-muted);font-size:12px">${r.claim_number||'—'}</td>
       <td>${r.insurer||'—'}</td>
-      <td>${r.claim_type||'—'}</td>
+      <td style="font-size:12px">${r.claim_type||'—'}</td>
       <td style="font-weight:600">${r.claim_amount ? UI.currency(r.claim_amount) : '—'}</td>
+      <td style="font-weight:600;color:${r.approved_amount > 0 ? 'var(--success)' : 'var(--text-muted)'}">${r.approved_amount > 0 ? UI.currency(r.approved_amount) : '—'}</td>
       <td style="color:var(--text-muted)">${UI.date(r.submit_date)}</td>
-      <td style="color:var(--text-muted)">${UI.date(r.last_update)}</td>
       <td>${UI.badge(r.status, CONFIG.CLAIM_STATUS)}</td>
+      <td>${docsBtn}</td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-outline btn-sm" onclick="ClaimsModule.openDetail('${r.id}')" title="View Details">👁️</button>
         <button class="btn btn-outline btn-sm" onclick="ClaimsModule.openEditModal('${r.id}')" title="Edit">✏️</button>
@@ -101,24 +105,29 @@ const ClaimsModule = (() => {
 
   function openDetail(id) {
     const r = _data.find(x => String(x.id) === String(id)); if (!r) return;
+    const docLink = r.documents_link && r.documents_link !== 'nan'
+      ? `<a href="${r.documents_link}" target="_blank" style="color:var(--accent);font-size:13px">📂 Open Documents</a>` : '—';
     UI.showModal(`Claim: ${r.client_name}`, `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-        ${[['Client', r.client_name], ['Claim No.', r.claim_number], ['Insurer', r.insurer],
+        ${[['Client', r.client_name], ['Claim No.', r.claim_number],
+           ['Policy No.', r.policy_number], ['Insurer', r.insurer],
            ['Type', r.claim_type], ['Status', UI.badge(r.status, CONFIG.CLAIM_STATUS)],
            ['Claim Amount', r.claim_amount ? UI.currency(r.claim_amount) : '—'],
-           ['Approved', r.approved_amount ? UI.currency(r.approved_amount) : '—'],
-           ['Paid Out', r.paid_amount ? UI.currency(r.paid_amount) : '—'],
-           ['Submit Date', UI.date(r.submit_date)], ['Last Update', UI.date(r.last_update)]
+           ['Approved', r.approved_amount > 0 ? UI.currency(r.approved_amount) : '—'],
+           ['Paid Out', r.paid_amount > 0 ? UI.currency(r.paid_amount) : '—'],
+           ['Submit Date', UI.date(r.submit_date)],
+           ['Last Update', UI.date(r.last_update)],
+           ['Documents', docLink]
           ].map(([l,v]) => `<div style="background:var(--bg-base);padding:10px;border-radius:6px;border:1px solid var(--border)">
             <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">${l}</div>
             <div style="font-size:13.5px;font-weight:500">${v||'—'}</div>
           </div>`).join('')}
       </div>
-      ${r.notes ? `<div style="background:var(--bg-base);padding:12px;border-radius:6px;border:1px solid var(--border)">
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Notes</div>
-        <div style="font-size:13px;color:var(--text-secondary);line-height:1.6">${r.notes}</div>
+      ${r.notes ? `<div style="background:var(--bg-base);padding:12px;border-radius:6px;border:1px solid var(--border);margin-bottom:8px">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Follow-up Notes</div>
+        <div style="font-size:13px;color:var(--text-secondary);line-height:1.8">${r.notes.replace(/\|/g,'<br>')}</div>
       </div>` : ''}
-      ${r.rejection_reason ? `<div style="background:#fee2e2;padding:12px;border-radius:6px;margin-top:8px">
+      ${r.rejection_reason ? `<div style="background:#fee2e2;padding:12px;border-radius:6px">
         <div style="font-size:11px;color:var(--danger);margin-bottom:4px;font-weight:600">Rejection Reason</div>
         <div style="font-size:13px;color:#991b1b">${r.rejection_reason}</div>
       </div>` : ''}`,
@@ -135,11 +144,11 @@ const ClaimsModule = (() => {
         </div>
         <div class="form-group">
           <label class="form-label">Policy Number</label>
-          <input class="form-control" type="text" id="f-policy-number" value="${d.policy_number||''}" placeholder="Policy number" />
+          <input class="form-control" type="text" id="f-policy-number" value="${d.policy_number||''}" />
         </div>
         <div class="form-group">
           <label class="form-label">Claim Number</label>
-          <input class="form-control" type="text" id="f-claim-number" value="${d.claim_number||''}" placeholder="Claim reference number" />
+          <input class="form-control" type="text" id="f-claim-number" value="${d.claim_number||''}" />
         </div>
         <div class="form-group">
           <label class="form-label">Insurer *</label>
@@ -158,7 +167,7 @@ const ClaimsModule = (() => {
         <div class="form-group">
           <label class="form-label">Status</label>
           <select class="form-control" id="f-status">
-            ${CONFIG.CLAIM_STATUS.map(s => `<option value="${s.value}"${(d.status||'draft')===s.value?' selected':''}>${s.label}</option>`).join('')}
+            ${CONFIG.CLAIM_STATUS.map(s => `<option value="${s.value}"${(d.status||'submitted')===s.value?' selected':''}>${s.label}</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
@@ -179,12 +188,16 @@ const ClaimsModule = (() => {
         </div>
       </div>
       <div class="form-group">
+        <label class="form-label">Documents Link (Google Drive URL)</label>
+        <input class="form-control" type="text" id="f-doc-link" value="${d.documents_link||''}" placeholder="https://drive.google.com/..." />
+      </div>
+      <div class="form-group">
         <label class="form-label">Rejection Reason</label>
         <input class="form-control" type="text" id="f-rejection" value="${d.rejection_reason||''}" placeholder="If rejected, state reason" />
       </div>
       <div class="form-group">
-        <label class="form-label">Notes</label>
-        <textarea class="form-control" id="f-notes" placeholder="Any additional notes...">${d.notes||''}</textarea>
+        <label class="form-label">Follow-up Notes</label>
+        <textarea class="form-control" id="f-notes" placeholder="Follow-up history, actions taken...">${d.notes||''}</textarea>
       </div>`;
   }
 
@@ -204,6 +217,7 @@ const ClaimsModule = (() => {
       approved_amount:  parseFloat(document.getElementById('f-approved-amount').value)||0,
       submit_date:      document.getElementById('f-submit-date').value,
       last_update:      document.getElementById('f-last-update').value,
+      documents_link:   document.getElementById('f-doc-link').value.trim(),
       rejection_reason: document.getElementById('f-rejection').value.trim(),
       notes:            document.getElementById('f-notes').value.trim()
     };
@@ -255,8 +269,9 @@ const ClaimsModule = (() => {
       'Claim No': r.claim_number, 'Insurer': r.insurer,
       'Type': r.claim_type, 'Claim Amount': r.claim_amount,
       'Approved': r.approved_amount, 'Submit Date': r.submit_date,
+      'Last Update': r.last_update,
       'Status': (CONFIG.CLAIM_STATUS.find(s=>s.value===r.status)||{label:r.status}).label,
-      'Notes': r.notes
+      'Documents': r.documents_link, 'Notes': r.notes
     })), 'Claims');
   }
 

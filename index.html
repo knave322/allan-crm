@@ -5,9 +5,111 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Allan CRM 2026</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* ── Login Screen ── */
+    #login-screen {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #f0f4f8 0%, #e2eaf4 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    #login-screen.hidden { display: none; }
+
+    .login-card {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+    }
+    .login-logo {
+      width: 56px; height: 56px;
+      background: #0ea5e9;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 800; color: white;
+      margin: 0 auto 18px;
+    }
+    .login-title {
+      font-size: 20px; font-weight: 700;
+      color: #1e293b; margin-bottom: 4px;
+    }
+    .login-sub {
+      font-size: 13px; color: #94a3b8; margin-bottom: 28px;
+    }
+    .login-input {
+      width: 100%; padding: 11px 14px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 15px; font-family: 'Inter', sans-serif;
+      color: #1e293b; background: #f8fafc;
+      margin-bottom: 12px;
+      text-align: center; letter-spacing: 3px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .login-input:focus {
+      outline: none; border-color: #0ea5e9;
+      box-shadow: 0 0 0 3px rgba(14,165,233,0.12);
+    }
+    .login-btn {
+      width: 100%; padding: 12px;
+      background: #0ea5e9; color: white;
+      border: none; border-radius: 8px;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: background 0.2s;
+    }
+    .login-btn:hover { background: #0284c7; }
+    .login-error {
+      color: #ef4444; font-size: 13px;
+      margin-top: 10px; min-height: 18px;
+    }
+    .login-footer {
+      margin-top: 24px; font-size: 11.5px; color: #cbd5e1;
+    }
+
+    /* ── Session timeout warning ── */
+    #session-warning {
+      display: none;
+      position: fixed;
+      bottom: 80px; right: 24px;
+      background: #fef3c7; border: 1px solid #fde68a;
+      border-radius: 8px; padding: 12px 16px;
+      font-size: 13px; color: #92400e;
+      z-index: 5000; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    #session-warning.show { display: block; }
+  </style>
 </head>
 <body>
 
+<!-- ── Login Screen ── -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">AW</div>
+    <div class="login-title">Allan CRM 2026</div>
+    <div class="login-sub">ROC Wealth Advisory — Enter password to continue</div>
+    <input class="login-input" type="password" id="login-password"
+      placeholder="••••••••"
+      onkeydown="if(event.key==='Enter') Auth.login()" />
+    <button class="login-btn" onclick="Auth.login()">🔐 Login</button>
+    <div class="login-error" id="login-error"></div>
+    <div class="login-footer">Session expires after 30 minutes of inactivity</div>
+  </div>
+</div>
+
+<!-- ── Session Warning ── -->
+<div id="session-warning">
+  ⏰ Session expiring in 5 minutes. <a href="#" onclick="Auth.extend()" style="color:#92400e;font-weight:600">Stay logged in</a>
+</div>
+
+<!-- ── Main App (hidden until logged in) ── -->
 <aside id="sidebar">
   <div class="sidebar-logo">
     <div class="logo-badge" id="logo-badge">AW</div>
@@ -16,7 +118,6 @@
       <div class="logo-sub" id="sys-company">ROC Wealth Advisory</div>
     </div>
   </div>
-
   <nav class="sidebar-nav">
     <div class="nav-section-label">Main Menu</div>
     <button class="nav-item active" data-page="dashboard">
@@ -31,29 +132,25 @@
     <button class="nav-item" data-page="servicing">
       <span class="nav-icon">🔧</span> Service Records
     </button>
-
     <div class="nav-section-label" style="margin-top:8px">System</div>
     <button class="nav-item" data-page="settings">
       <span class="nav-icon">⚙️</span> Settings & Help
     </button>
   </nav>
-
   <div class="sidebar-footer">
     <div class="connection-badge">
       <div class="connection-dot disconnected"></div>
       <span class="connection-text">Connecting...</span>
     </div>
     <div style="margin-top:6px;font-size:10px;color:var(--text-muted)">Allan CRM 2026 v1.0</div>
+    <button onclick="Auth.logout()" style="margin-top:8px;width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer">🚪 Logout</button>
   </div>
 </aside>
 
 <div id="main-content">
-  <!-- Offline Banner -->
   <div id="offline-banner">
     📶 You are offline — showing cached data. Changes cannot be saved until reconnected.
   </div>
-
-  <!-- Top Bar -->
   <header id="topbar">
     <div class="topbar-left">
       <div class="topbar-title" id="page-title">Dashboard</div>
@@ -66,7 +163,6 @@
       </button>
     </div>
   </header>
-
   <div id="page-content">
     <div class="loading-overlay">
       <div class="spinner"></div>
@@ -75,11 +171,91 @@
   </div>
 </div>
 
-<!-- Toast Container -->
 <div id="toast-container"></div>
 
 <!-- Scripts -->
 <script src="config.js"></script>
+<script>
+// ── Auth Module ───────────────────────────────────────────
+const Auth = (() => {
+  const SESSION_KEY = 'crm_session';
+
+  function isLoggedIn() {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return false;
+      const { ts } = JSON.parse(raw);
+      const mins = (Date.now() - ts) / 60000;
+      return mins < CONFIG.SESSION_MINUTES;
+    } catch { return false; }
+  }
+
+  function login() {
+    const pw  = document.getElementById('login-password').value;
+    const err = document.getElementById('login-error');
+    if (pw === CONFIG.PASSWORD) {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ts: Date.now() }));
+      document.getElementById('login-screen').classList.add('hidden');
+      err.textContent = '';
+      startSessionTimer();
+    } else {
+      err.textContent = '❌ Incorrect password. Please try again.';
+      document.getElementById('login-password').value = '';
+      document.getElementById('login-password').focus();
+    }
+  }
+
+  function logout() {
+    sessionStorage.removeItem(SESSION_KEY);
+    location.reload();
+  }
+
+  function extend() {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ts: Date.now() }));
+    document.getElementById('session-warning').classList.remove('show');
+    UI.toast('Session extended ✅', 'success');
+  }
+
+  function startSessionTimer() {
+    // Check every minute
+    setInterval(() => {
+      try {
+        const raw = sessionStorage.getItem(SESSION_KEY);
+        if (!raw) { logout(); return; }
+        const { ts } = JSON.parse(raw);
+        const minsLeft = CONFIG.SESSION_MINUTES - (Date.now() - ts) / 60000;
+        if (minsLeft <= 0) {
+          logout();
+        } else if (minsLeft <= 5) {
+          document.getElementById('session-warning').classList.add('show');
+        }
+      } catch { logout(); }
+    }, 60000);
+
+    // Reset timer on any user activity
+    ['click','keydown','mousemove','touchstart'].forEach(ev => {
+      document.addEventListener(ev, () => {
+        if (isLoggedIn()) {
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ts: Date.now() }));
+          document.getElementById('session-warning').classList.remove('show');
+        }
+      }, { passive: true });
+    });
+  }
+
+  function init() {
+    if (isLoggedIn()) {
+      document.getElementById('login-screen').classList.add('hidden');
+      startSessionTimer();
+    } else {
+      // Keep login screen visible, focus input
+      setTimeout(() => document.getElementById('login-password').focus(), 100);
+    }
+  }
+
+  return { init, login, logout, extend, isLoggedIn };
+})();
+</script>
 <script src="modules/api.js"></script>
 <script src="modules/ui.js"></script>
 <script src="modules/payments.js"></script>

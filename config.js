@@ -14,6 +14,13 @@ const CONFIG = {
   // ──────────────────────────────────────────────────────────
   API_URL: "https://script.google.com/macros/s/AKfycbwJvyJW_RKs2idl0zBSHgMIxxiC_OKoQVzAE7Wd5o7wEV4Ak7aBE1lkqJyMD92kmTbB/exec",
 
+  // ── 1b. LOGIN PASSWORD ─────────────────────────────────────
+  //    Change this to your preferred password
+  //    SESSION_MINUTES: how long before auto-logout (default 30)
+  // ──────────────────────────────────────────────────────────
+  PASSWORD: "Allan2026",
+  SESSION_MINUTES: 30,
+
   // ── 2. SYSTEM INFO ─────────────────────────────────────────
   SYSTEM: {
     name:         "Allan CRM 2026",

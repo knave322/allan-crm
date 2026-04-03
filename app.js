@@ -101,7 +101,15 @@ const App = (() => {
     await navigate(_currentPage);
   }
 
-  window.addEventListener('DOMContentLoaded', init);
+  window.addEventListener('DOMContentLoaded', () => {
+    Auth.init();
+    if (Auth.isLoggedIn()) init();
+    else {
+      const check = setInterval(() => {
+        if (Auth.isLoggedIn()) { clearInterval(check); init(); }
+      }, 200);
+    }
+  });
 
   return { navigate, refreshData };
 

@@ -28,7 +28,7 @@ const CONFIG = {
     advisor:      "Allan",
     currency:     "RM",
     timezone:     "Asia/Kuala_Lumpur",
-    logo_text:    "AW",
+    logo_text:    "RC",
     accent_color: "#0ea5e9"
   },
 

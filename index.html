@@ -95,9 +95,17 @@
     <div class="login-logo">AW</div>
     <div class="login-title">Allan CRM 2026</div>
     <div class="login-sub">ROC Wealth Advisory — Enter password to continue</div>
-    <input class="login-input" type="password" id="login-password"
-      placeholder="••••••••"
-      onkeydown="if(event.key==='Enter') Auth.login()" />
+    <div style="position:relative">
+      <input class="login-input" type="password" id="login-password"
+        placeholder="••••••••"
+        onkeydown="if(event.key==='Enter') Auth.login()"
+        style="padding-right:44px;margin-bottom:0" />
+      <button onclick="Auth.togglePw()"
+        style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;line-height:1">
+        👁️
+      </button>
+    </div>
+    <div style="height:12px"></div>
     <button class="login-btn" onclick="Auth.login()">🔐 Login</button>
     <div class="login-error" id="login-error"></div>
     <div class="login-footer">Session expires after 30 minutes of inactivity</div>
@@ -253,7 +261,12 @@ const Auth = (() => {
     }
   }
 
-  return { init, login, logout, extend, isLoggedIn };
+  function togglePw() {
+    const inp = document.getElementById('login-password');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  }
+
+  return { init, login, logout, extend, isLoggedIn, togglePw };
 })();
 </script>
 <script src="modules/api.js"></script>

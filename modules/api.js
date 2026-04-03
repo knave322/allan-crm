@@ -95,7 +95,7 @@ const API = (() => {
       method: 'POST',
       mode: 'cors',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action, data })
+      body: JSON.stringify({ action, ...data })
     });
     const json = await res.json();
     if (json.error) throw new Error(json.error);

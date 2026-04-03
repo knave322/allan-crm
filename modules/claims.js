@@ -63,7 +63,7 @@ const ClaimsModule = (() => {
       <div class="table-container">
         <table>
           <thead><tr>
-            <th>Client</th><th>Claim No.</th><th>Insurer</th><th>Type</th>
+            <th>Client</th><th>Policy No.</th><th>Claim No.</th><th>Type</th>
             <th>Claim Amount</th><th>Approved</th><th>Submit Date</th>
             <th>Status</th><th>Docs</th><th>Actions</th>
           </tr></thead>
@@ -83,8 +83,8 @@ const ClaimsModule = (() => {
         <div style="width:30px;height:30px;border-radius:50%;background:var(--success);color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${initials}</div>
         <span style="font-weight:500">${r.client_name||'—'}</span>
       </div></td>
+      <td style="color:var(--text-muted);font-size:12px">${r.policy_number||'—'}</td>
       <td style="color:var(--text-muted);font-size:12px">${r.claim_number||'—'}</td>
-      <td>${r.insurer||'—'}</td>
       <td style="font-size:12px">${r.claim_type||'—'}</td>
       <td style="font-weight:600">${r.claim_amount ? UI.currency(r.claim_amount) : '—'}</td>
       <td style="font-weight:600;color:${r.approved_amount > 0 ? 'var(--success)' : 'var(--text-muted)'}">${r.approved_amount > 0 ? UI.currency(r.approved_amount) : '—'}</td>

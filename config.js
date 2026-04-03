@@ -18,7 +18,7 @@ const CONFIG = {
   //    Change this to your preferred password
   //    SESSION_MINUTES: how long before auto-logout (default 30)
   // ──────────────────────────────────────────────────────────
-  PASSWORD: "Allan2026",
+  PASSWORD: "roc",
   SESSION_MINUTES: 30,
 
   // ── 2. SYSTEM INFO ─────────────────────────────────────────
